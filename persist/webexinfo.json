@@ -1,0 +1,14 @@
+{
+    "ClientID": "webex-integration-ID",
+    "ClientSecret": "webex-integration-Secret",
+    "BotID": "webex-bot-ID",
+    "BotAuthToken": "webex-bot-auth",
+    "SpaceID": "SpaceID for Logging messages",
+    "studentMail": "@student.school.net",
+    "facultyMail": "@school.net",
+    "processInterval": "60",
+    "adminaccount": "admin@school.net",
+    "action": "update",
+    "harmless": "yes",
+    "loglevel": "INFO"
+}
