@@ -36,17 +36,32 @@ apiEvents = "https://webexapis.com/v1/events"
 global workdir
 workdir = "./persist"
 
+# Setup Logging
+formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+def setup_logger(name, log_file, level):
+    """To setup as many loggers as you want"""
+
+    handler = logging.FileHandler(log_file)        
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.addHandler(handler)
+
+    return logger
+
 # Create Webex Bot Reporting
 def ReportToSpace(ReportMessage):
+    encodedReport = str(repr(ReportMessage.encode('ascii', errors='ignore'))[2:-1])
     payload = "{\"roomId\" : \"" + \
-        str(SpaceID) + "\",\"text\" : \"" + str(ReportMessage) + "\"}"
+        str(SpaceID) + "\",\"text\" : \"" + str(encodedReport) + "\"}"
     headers = {
         'Authorization': "Bearer "+str(BotAuthToken),
         'Content-Type': "application/json",
         'cache-control': "no-cache",
     }
     response = requests.post(apiMessage, data=payload, headers=headers)
-    logging.info(f"Message reported to space: {ReportMessage} - {response.status_code}")
+    logging.info(f"Message reported to space: {encodedReport} - {response.status_code}")
 
 # Token Management
 def do_getTokens():
@@ -168,63 +183,68 @@ def auditSpaces(api):
     
     events = api.events.list(resource="memberships",type="created",_from=eventtime)
     for event in events:
-        if str(studentMail) in str(event.data.personEmail) and str(event.data.roomType) == "group":
-            logging.debug(f"Event id processing {event.id} by user {event.data.personEmail}.")
-            currentroom = api.rooms.get(event.data.roomId)
-            logging.debug(currentroom)
-            if str(event.data.personId) in str(currentroom.creatorId):
+        try:
+            if str(studentMail) in str(event.data.personEmail) and str(event.data.roomType) == "group":
                 
-                if harmless == "no":
-                    ReportToSpace(f"Processing room {currentroom.title} in {action} mode. Harmless is set to {harmless}.")
-                elif harmless == "yes":
-                    ReportToSpace(f"-- Harmless mode is enabled. This is a notification only. -- Script would have processed room {currentroom.title} in {action} mode but no action has been taken.")
+                logging.debug(f"Event id processing {event.id} by user {event.data.personEmail}.")
+                currentroom = api.rooms.get(event.data.roomId)
+                logging.debug(currentroom)
+                
+                if str(event.data.personId) in str(currentroom.creatorId):
+                    
+                    if harmless == "no":
+                        ReportToSpace(f"Processing room {currentroom.title} in {action} mode. Harmless is set to {harmless}.")
+                    elif harmless == "yes":
+                        ReportToSpace(f"-- Harmless mode is enabled. This is a notification only. -- Script would have processed room {currentroom.title} in {action} mode but no action has been taken.")
 
-                if str(action) in "update":
-                    try:
-                        if harmless == "no":
-                            api.memberships.create(currentroom.id, personEmail=adminaccount)
-                            ReportToSpace(f"--- Admin added to room {currentroom.title}.")
-                            logging.debug(f"--- Room ID {currentroom.id}.")
-                        else:
-                            logging.info(f"--- HARMLESS -- Admin would be added to room {currentroom.title}.")
-                            logging.debug(f"--- HARMLESS -- Room ID: {currentroom.id}.")
-                    except:
-                        logging.debug("--- Unable to add admin or already exists.")
-                    try:
-                        roommembers = api.memberships.list(roomId=event.data.roomId)
-                        for member in roommembers:
-                            if str(member.personEmail) in str(adminaccount):
-                                logging.debug(f"------ Skipping admin account removal.")
+                    if str(action) in "update":
+                        try:
+                            if harmless == "no":
+                                api.memberships.create(currentroom.id, personEmail=adminaccount)
+                                ReportToSpace(f"--- Admin added to room {currentroom.title}.")
+                                logging.debug(f"--- Room ID {currentroom.id}.")
                             else:
-                                try:
-                                    if harmless == "no":
-                                        api.memberships.delete(member.id)
-                                        ReportToSpace(f"------ Member {member.personEmail} removed from room {currentroom.title}.")
-                                        logging.debug(f"------ Member ID: {member.id}")
-                                    else:
-                                        logging.info(f"------ HARMLESS -- Member {member.personEmail} would be removed from room {currentroom.title}.")
-                                except:
-                                    ReportToSpace(f"------ Could not delete {member.personEmail} from room {currentroom.title}.")
-                        ReportToSpace(f"All members processed for room {currentroom.title}.")
-                    except:
-                        ReportToSpace(f"Unable to update room {currentroom.title} membership.")
-                if str(action) in "delete":
-                    try:
-                        if harmless == "no":
-                            api.memberships.create(currentroom.id, personEmail=adminaccount)
-                            logging.debug(f"--- Admin added to room {currentroom.id}.")
-                        else:
-                            logging.debug(f"--- HARMLESS -- Admin would be added to room {currentroom.id}.")
-                    except:
-                        logging.debug("--- Unable to add admin or already exists.")
-                    try:
-                        if harmless == "no":
-                            api.rooms.delete(currentroom.id)
-                            ReportToSpace(f"------ Room {currentroom.title} created by {event.data.personEmail} deleted.")
-                        else:
-                            logging.info(f"------ HARMLESS -- Room {currentroom.title} created by {event.data.personEmail} would be deleted.")
-                    except:
-                        ReportToSpace("------ Room could not be deleted. Possibly already processed in prior run.")
+                                logging.info(f"--- HARMLESS -- Admin would be added to room {currentroom.title}.")
+                                logging.debug(f"--- HARMLESS -- Room ID: {currentroom.id}.")
+                        except:
+                            logging.debug("--- Unable to add admin or already exists.")
+                        try:
+                            roommembers = api.memberships.list(roomId=event.data.roomId)
+                            for member in roommembers:
+                                if str(member.personEmail) in str(adminaccount):
+                                    logging.debug(f"------ Skipping admin account removal.")
+                                else:
+                                    try:
+                                        if harmless == "no":
+                                            api.memberships.delete(member.id)
+                                            ReportToSpace(f"------ Member {member.personEmail} removed from room {currentroom.title}.")
+                                            logging.debug(f"------ Member ID: {member.id}")
+                                        else:
+                                            logging.info(f"------ HARMLESS -- Member {member.personEmail} would be removed from room {currentroom.title}.")
+                                    except:
+                                        ReportToSpace(f"------ Could not delete {member.personEmail} from room {currentroom.title}.")
+                            ReportToSpace(f"All members processed for room {currentroom.title}.")
+                        except:
+                            ReportToSpace(f"Unable to update room {currentroom.title} membership.")
+                    if str(action) in "delete":
+                        try:
+                            if harmless == "no":
+                                api.memberships.create(currentroom.id, personEmail=adminaccount)
+                                logging.debug(f"--- Admin added to room {currentroom.id}.")
+                            else:
+                                logging.debug(f"--- HARMLESS -- Admin would be added to room {currentroom.id}.")
+                        except:
+                            logging.debug("--- Unable to add admin or already exists.")
+                        try:
+                            if harmless == "no":
+                                api.rooms.delete(currentroom.id)
+                                ReportToSpace(f"------ Room {currentroom.title} created by {event.data.personEmail} deleted.")
+                            else:
+                                logging.info(f"------ HARMLESS -- Room {currentroom.title} created by {event.data.personEmail} would be deleted.")
+                        except:
+                            ReportToSpace("------ Room could not be deleted. Possibly already processed in prior run.")
+        except:
+            errorlog.debug(f"Failed to process event data: {event}")
 
 # Primary function
 def main():
@@ -237,6 +257,9 @@ def main():
                         datefmt='%m-%d %H:%M',
                         filename="" + str(workdir) + "/processing.log",
                         filemode='a')
+    
+    errorLogpath = str(workdir) + "/error.log"
+    errorlog = setup_logger('error_log', errorLogpath, logging.DEBUG)
 
     # Report script initiation
     ReportToSpace(
