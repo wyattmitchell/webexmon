@@ -1,4 +1,4 @@
-# WebexMon
+# Webex Spaces Monitor
 Webex Spaces Monitor
 
 ## Use Case
@@ -15,10 +15,14 @@ under the control of school teachers or administrators.
 Runs a Docker container to pull all recent Webex Room/Space membership changes
 capturing new room creation by students and moves them to admin control.
 
+## Related Learning Labs
+- Getting Started with Webex APIs - https://developer.cisco.com/learning/tracks/collab-cloud
+- Getting Started with Containers (Specifically Intro to containers part 1 and part 2) - https://developer.cisco.com/learning/tracks/containers
+
 ## Usage
 All variables MUST be defined in "webexinfo.json" for script to function.
 
-### Variable descriptions:
+#### Variable descriptions:
 - ClientID and ClientSecret - from Webex Integration (used for token renewal and access to API)
 - BotID and AuthToken - for Webex Bot (Bot to post messages to Teams Space)
 - SpaceID - Webex space ID where the Bot is a member and will post logs
@@ -29,7 +33,7 @@ All variables MUST be defined in "webexinfo.json" for script to function.
  only log what action would be taken. No will process the actions.
 - loglevel - options are INFO or DEBUG - Adjust logging verbosity.
 
-### Docker container setup:
+#### Docker container setup:
 - Script runs within a Docker container. Info on Docker and setup can be 
 found at https://www.docker.com/get-started
 - Once Docker is running, navigate in your terminal program to the path 
