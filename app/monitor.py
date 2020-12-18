@@ -46,8 +46,7 @@ def ReportToSpace(ReportMessage):
         'cache-control': "no-cache",
     }
     response = requests.post(apiMessage, data=payload, headers=headers)
-    logging.info("Message reported to space: " +
-                 str(ReportMessage)+str(response.status_code))
+    logging.info(f"Message reported to space: {ReportMessage} - {response.status_code}")
 
 # Token Management
 def do_getTokens():
@@ -64,8 +63,7 @@ def do_getTokens():
         tokenIssued = 0
     token_store.close()
     token_age = int(epoch_time) - int(tokenIssued)
-    logging.info("The access token age is: " +
-                 str(datetime.timedelta(seconds=token_age)))
+    logging.info(f"The access token age is: {datetime.timedelta(seconds=token_age)}")
     if token_age > 259200:
         ReportToSpace(
             "The access token is a little stale, refreshing it now..")
