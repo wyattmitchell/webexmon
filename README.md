@@ -1,8 +1,15 @@
 # WebexMon
 Webex Spaces Monitor
 
-## Description
+## Use Case
+In K-12 environments students with Webex access may be able to create spaces and misuse the technology.
+Granular control is on the horizon but until it arrives this container and script can be
+used to match newly student created Webex spaces then transfer ownership to an administrator
+and remove other users or delete the space entirely.
 
+The intent is to remove the ability for students to create widespread spaces outside the control of school teachers or administrators.
+
+## Description
 Runs a docker container to pull all recent Webex Room/Space membership changes
 capturing new room creation by students and subsequently deletes those rooms.
 
