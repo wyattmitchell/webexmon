@@ -1,5 +1,4 @@
 # Webex Spaces Monitor
-Webex Spaces Monitor
 
 ## Use Case
 In K-12 environments students with Webex access may be able to create spaces

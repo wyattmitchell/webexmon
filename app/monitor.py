@@ -1,3 +1,22 @@
+#########################################################################
+#
+# Copyright 2020 Mitchell Wyatt
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+#########################################################################
+
 from webexteamssdk import WebexTeamsAPI
 import logging
 import requests
@@ -5,26 +24,8 @@ import json
 import time
 import datetime
 
-########################################################################################################
-# Webex Monitor
-#
-# Runs a continuous docker container (configurable process interval) to pull all recent Webex
-# Room/Space membership changes to capture new room creation by students and delete those rooms.
-#
-# Version starting with v.2.0.1 modified and assembled by Mitchell Wyatt. It's been mangled almost
-# beyond recognition from what Jim Martin originally built but the soul lives on.
-# All prior releases # and function framework written by James Martin. Version history sanitized for general use.
-#
 global scriptVersion
 scriptVersion = "2.1.0"
-#               v.2.0.1  - all earlier revs built by James Martin. This version is hacked up,
-#                          mangled and repackaged by Mitchell Wyatt based on webexteamssdk
-#                          for User API interactions. Token managed via requests library.
-#                          Wrapped in docker for standardized deployment.
-#               v.2.1.0  - webexinfo.json file update with Debug, Action and Harmless options
-#                          Readme updated to explain new features.
-#                          main() updated and sub functions created.
-########################################################################################################
 
 # Create static variables - Unless the Webex Teams API endpoints change, these shouldn't need updating.
 apiMessage = "https://webexapis.com/v1/messages"
