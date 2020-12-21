@@ -65,7 +65,7 @@ def ReportToSpace(ReportMessage):
 
 # Token Management
 def do_getTokens():
-    ReportToSpace("Checking to see if we have the latest Access Token.")
+    logging.info("Checking to see if we have the latest Access Token.")
     with open(str(workdir)+"/tokens.json", "r") as token_store:
         tokens_dict = json.load(token_store)
     global accessToken
@@ -79,8 +79,8 @@ def do_getTokens():
     token_store.close()
     token_age = int(epoch_time) - int(tokenIssued)
     logging.info(f"The access token age is: {datetime.timedelta(seconds=token_age)}")
-    if token_age > 172800:
-        ReportToSpace(
+    if token_age > 259200:
+        logging.info(
             "The access token is a little stale, refreshing it now..")
         headers = {'cache-control': 'no-cache', 'accept': 'application/json',
                    'content-type': 'application/x-www-form-urlencoded'}
@@ -96,10 +96,10 @@ def do_getTokens():
         accessToken = (tokens_dict["access_token"])
         refreshToken = (tokens_dict["refresh_token"])
         token_store.close()
-        ReportToSpace(
+        logging.info(
             "Done! The access token has been refreshed. Getting back to work.")
     else:
-        ReportToSpace(
+        logging.info(
             "The access token looks daisy fresh.. continuing on with the license reconciliation process.")
 
 # Import configurable variables from webexinfo.json file.
@@ -160,6 +160,48 @@ def importvars():
     else:
         raise Exception("Harmless not defined as yes or no.")
 
+# Import processes to take action on from process.json
+def importprocesses():
+
+    #Import processes
+    with open(str(workdir)+"/process.json", "r") as vars_store:
+        vars_dict = json.load(vars_store)
+
+    global processlicenses
+    global harmlesslicenses
+
+    processlicenses = (vars_dict["processlicenses"])
+    harmlesslicenses = (vars_dict["harmlesslicenses"])
+
+    # Validate process licensess
+    if processlicenses == "no":
+        pass
+    elif processlicenses == "yes":
+        pass
+    else:
+        raise Exception("Process License not defined as yes or no.")
+
+    # Validate harmless license
+    if harmlesslicenses == "no":
+        pass
+    elif harmlesslicenses == "yes":
+        pass
+    else:
+        raise Exception("Harmless license not defined as yes or no.")
+
+# Import license lists
+def importlicenses():
+
+    #Import vars
+    with open(str(workdir)+"/licenses.json", "r") as vars_store:
+        vars_dict = json.load(vars_store)
+
+    global employeeLics
+    global studentLics
+
+    employeeLics = (vars_dict["employee"])
+    studentLics = (vars_dict["student"])
+
 def updatetime():
     # Create or update runtime variables
     global timediff
@@ -174,95 +216,78 @@ def updatetime():
     today = time.strftime("%Y%m%d-%H%M")
     eventtime = datetime.datetime.utcfromtimestamp(int(epoch_time)-int(timediff)).strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
-# Gets all membership events over the specified interval.
-# For rooms created by students this will add the admin account and remove all other members.
-def auditSpaces(api):
+def license(api):
+    # Load Webex Users and update licenses as necessary.
+    total_records = 0
+    modified_records = 0
+    people = api.people.list()
+    for person in people:
+        total_records = int(total_records) + 1
 
-    logging.info(f"Beginning next run...")
+        # Match non-students (employees) and check their licenses list matches licenses.json. If mis-match, update.
+        if str(studentMail) not in str(person.emails):
+            needsupdate = False
+            currentlic = person.licenses
+
+            for lic in employeeLics:
+                if str(lic) not in str(person.licenses):
+                    needsupdate = True
+                    currentlic.append(lic)
+            
+            if needsupdate == True:
+                logging.debug(f"Start license list: {person.licenses}")
+                logging.debug(f"Final license list: {currentlic}")           
+                if harmlesslicenses == "no":
+                    ReportToSpace(f"Looks like employee {str(person.emails)} needs a Webex license update.")
+                    try:
+                        api.people.update(person.id, emails=person.emails, displayName=person.displayName, firstName=person.firstName,
+                                                    lastName=person.lastName, avatar=person.avatar, orgId=person.orgId, roles=person.roles,
+                                                    licenses=currentlic)
+                        modified_records = int(modified_records) + 1
+                    except:
+                        errorlog.debug(f"User failed info: {person}")
+                        ReportToSpace(f"License update failed for employee: {person.emails}")
+                elif harmlesslicenses == "yes":
+                    logging.info(f"*** HARMLESS *** Employee {str(person.emails)} would have received a license update.")
+
+        # Match students and check license matches license.json. If mis-match, update.    
+        elif str(studentMail) in str(person.emails) and person.licenses != studentLics:
+            if harmlesslicenses == "no":
+                try:
+                    ReportToSpace(f"Looks like student {str(person.emails)} needs a Webex license update.")
+                    api.people.update(person.id, emails=person.emails, displayName=person.displayName, firstName=person.firstName,
+                                             lastName=person.lastName, avatar=person.avatar, orgId=person.orgId, roles=person.roles,
+                                             licenses=studentLics)
+                    modified_records = int(modified_records) + 1
+                except:
+                    errorlog.debug(f"User failed info: {person}")
+                    ReportToSpace(f"License update failed for student: {person.emails}")
+            elif harmlesslicenses == "yes":
+                logging.info(f"*** HARMLESS *** Student {str(person.emails)} would have received a license update.")       
     
-    events = api.events.list(resource="memberships",type="created",_from=eventtime)
-    for event in events:
-        try:
-            if str(studentMail) in str(event.data.personEmail) and str(event.data.roomType) == "group":
-                
-                logging.debug(f"Event id processing {event.id} by user {event.data.personEmail}.")
-                currentroom = api.rooms.get(event.data.roomId)
-                logging.debug(currentroom)
-                
-                if str(event.data.personId) in str(currentroom.creatorId):
-                    
-                    if harmless == "no":
-                        ReportToSpace(f"Processing room {currentroom.title} in {action} mode. Harmless is set to {harmless}.")
-                    elif harmless == "yes":
-                        ReportToSpace(f"-- Harmless mode is enabled. This is a notification only. -- Script would have processed room {currentroom.title} in {action} mode but no action has been taken.")
-
-                    if str(action) in "update":
-                        try:
-                            if harmless == "no":
-                                api.memberships.create(currentroom.id, personEmail=adminaccount)
-                                ReportToSpace(f"--- Admin added to room {currentroom.title}.")
-                                logging.debug(f"--- Room ID {currentroom.id}.")
-                            else:
-                                logging.info(f"--- HARMLESS -- Admin would be added to room {currentroom.title}.")
-                                logging.debug(f"--- HARMLESS -- Room ID: {currentroom.id}.")
-                        except:
-                            logging.debug("--- Unable to add admin or already exists.")
-                        try:
-                            roommembers = api.memberships.list(roomId=event.data.roomId)
-                            for member in roommembers:
-                                if str(member.personEmail) in str(adminaccount):
-                                    logging.debug(f"------ Skipping admin account removal.")
-                                else:
-                                    try:
-                                        if harmless == "no":
-                                            api.memberships.delete(member.id)
-                                            ReportToSpace(f"------ Member {member.personEmail} removed from room {currentroom.title}.")
-                                            logging.debug(f"------ Member ID: {member.id}")
-                                        else:
-                                            logging.info(f"------ HARMLESS -- Member {member.personEmail} would be removed from room {currentroom.title}.")
-                                    except:
-                                        ReportToSpace(f"------ Could not delete {member.personEmail} from room {currentroom.title}.")
-                            ReportToSpace(f"All members processed for room {currentroom.title}.")
-                        except:
-                            ReportToSpace(f"Unable to update room {currentroom.title} membership.")
-                    if str(action) in "delete":
-                        try:
-                            if harmless == "no":
-                                api.memberships.create(currentroom.id, personEmail=adminaccount)
-                                logging.debug(f"--- Admin added to room {currentroom.id}.")
-                            else:
-                                logging.debug(f"--- HARMLESS -- Admin would be added to room {currentroom.id}.")
-                        except:
-                            logging.debug("--- Unable to add admin or already exists.")
-                        try:
-                            if harmless == "no":
-                                api.rooms.delete(currentroom.id)
-                                ReportToSpace(f"------ Room {currentroom.title} created by {event.data.personEmail} deleted.")
-                            else:
-                                logging.info(f"------ HARMLESS -- Room {currentroom.title} created by {event.data.personEmail} would be deleted.")
-                        except:
-                            ReportToSpace("------ Room could not be deleted. Possibly already processed in prior run.")
-        except:
-            errorlog.debug(f"Failed to process event data: {event}")
+    ReportToSpace(f"License processing thread complete. {modified_records} users updated.")
 
 # Primary function
 def main():
 
     importvars()
-        updatetime()
+    importprocesses()
+    importlicenses()
+    
+    updatetime()
 
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M',
-                        filename="" + str(workdir) + "/logs/processing.log",
+                        filename="" + str(workdir) + "/logs/license.log",
                         filemode='a')
     
-    errorLogpath = str(workdir) + "/logs/error.log"
+    errorLogpath = str(workdir) + "/logs/lic-error.log"
     global errorlog
     errorlog = setup_logger('error_log', errorLogpath, logging.DEBUG)
 
     # Report script initiation
-    ReportToSpace(f"Validation of Webex Cloud services has started. Using: monitor.py {str(scriptVersion)}")
+    ReportToSpace(f"Validation of Webex Cloud services has started. Using: licensecheck.py {str(scriptVersion)}")
     
     token_check = -1
 
@@ -272,14 +297,18 @@ def main():
 
             # Get Tokens and create API object
             do_getTokens()
-            token_check = 86400
             api = WebexTeamsAPI(access_token=accessToken)
+
+            # How often to check token (daily @ 86400)
+            token_check = 86400
+
+            # Included with token refresh to only run daily.
+            if processlicenses == "yes":
+                ReportToSpace(f"Starting license processing thread.")
+                license(api)
 
         # Update time interval variables.
         updatetime()
-
-        # Run process
-        auditSpaces(api)
 
         logging.info(f"Sleeping for {processInterval} seconds.")
         token_check = token_check - processInterval
