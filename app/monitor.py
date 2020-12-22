@@ -25,7 +25,7 @@ import time
 import datetime
 
 global scriptVersion
-scriptVersion = "2.2.0"
+scriptVersion = "2.2.1"
 
 # Create static variables - Unless the Webex Teams API endpoints change, these shouldn't need updating.
 apiMessage = "https://webexapis.com/v1/messages"
@@ -199,7 +199,7 @@ def auditSpaces(api):
                     if str(action) in "update":
                         try:
                             if harmless == "no":
-                                api.memberships.create(currentroom.id, personEmail=adminaccount)
+                                api.memberships.create(currentroom.id, personEmail=adminaccount, isModerator=True)
                                 ReportToSpace(f"--- Admin added to room {currentroom.title}.")
                                 logging.debug(f"--- Room ID {currentroom.id}.")
                             else:
@@ -228,12 +228,30 @@ def auditSpaces(api):
                     if str(action) in "delete":
                         try:
                             if harmless == "no":
-                                api.memberships.create(currentroom.id, personEmail=adminaccount)
+                                api.memberships.create(currentroom.id, personEmail=adminaccount, isModerator=True)
                                 logging.debug(f"--- Admin added to room {currentroom.id}.")
                             else:
-                                logging.debug(f"--- HARMLESS -- Admin would be added to room {currentroom.id}.")
+                                logging.debug(f"--- HARMLESS -- Admin would be added to room {currentroom.title}.")
+                                logging.debug(f"--- HARMLESS -- Room ID: {currentroom.id}.")
                         except:
                             logging.debug("--- Unable to add admin or already exists.")
+                        try:
+                            roommembers = api.memberships.list(roomId=event.data.roomId)
+                            for member in roommembers:
+                                if str(member.personEmail) in str(adminaccount):
+                                    logging.debug(f"------ Skipping admin account removal.")
+                                else:
+                                    try:
+                                        if harmless == "no":
+                                            api.memberships.delete(member.id)
+                                            logging.debug(f"------ Member {member.personEmail} removed from room {currentroom.title}.")
+                                            logging.debug(f"------ Member ID: {member.id}")
+                                        else:
+                                            logging.debug(f"------ HARMLESS -- Member {member.personEmail} would be removed from room {currentroom.title}.")
+                                    except:
+                                        logging.debug(f"------ Could not delete {member.personEmail} from room {currentroom.title}.")
+                        except:
+                            logging.debug(f"------Could not clear room members.")
                         try:
                             if harmless == "no":
                                 api.rooms.delete(currentroom.id)
@@ -249,7 +267,7 @@ def auditSpaces(api):
 def main():
 
     importvars()
-        updatetime()
+    updatetime()
 
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',

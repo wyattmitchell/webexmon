@@ -2,10 +2,7 @@
 
 ## Use Case
 In K-12 environments students with Webex access may be able to create spaces
-outside of admin view and misuse the technology. Granular control is on the horizon
-but until it arrives this container and script can be used to match newly student
-created Webex spaces then transfer ownership to an administrator and remove other
-users or delete the space entirely.
+outside of admin view and misuse the technology. This container and script can be used to match student created Webex spaces then add an administrator as moderator and remove other users or delete the space entirely.
 
 The intent is to provide ongoing monitoring of newly created spaces and move those
 under the control of school teachers or administrators.
@@ -14,11 +11,10 @@ The license verification function is intended to validate and, if required, upda
 license assignments to match those specified.
 
 ## Description
-Runs a Docker container to pull all recent Webex Room/Space membership changes
-capturing new room creation by students and moves them to admin control.
+Runs a Docker container to pull recent Webex Room/Space membership changes
+capturing new room creation by students and moving them to admin control.
 
-Also can run a license verification script to iterate through all users
-and verify or update licenses accordingly.
+Container can also be run as a license verification script to iterate through all users and verify or update licenses to match those specified.
 
 ## Related Learning Labs
 - Getting Started with Webex APIs - https://developer.cisco.com/learning/tracks/collab-cloud
@@ -34,16 +30,14 @@ webexinfo.json contains all operational configuration as follows.
 - BotID and AuthToken - for Webex Bot (Bot to post messages to Teams Space)
 - SpaceID - Webex space ID where the Bot is a member and will post logs
 - studentMail and facultyMail - Pattern to match for student and faculty accounts.
-- action - options are "update" or "delete" - Update will add the admin to the room and remove
- all other members. Delete will delete the room.
+- action - options are "update" or "delete" - Update will add the admin to the room and remove all other members. Delete will delete the room unless part of a Team. Delete action on a Team room will behave like an update due to the way Team Spaces are handled.
 - harmless - options are "yes" or no" - Yes will disable the action changes from occuring and
  only log what action would be taken. No will process the actions.
 - loglevel - options are INFO or DEBUG - Adjust logging verbosity.
 
 process.json allows enable/disable of processes run by the script
 - processlicenses - options are "yes" or "no" - Yes will check all Webex users for correct licenses. No disables this process.
-- harmlesslicenses - options are "yes" or "no" - Yes will disable changes and only report expected
-changes. No will attempt updates to the licenses assigned.
+- harmlesslicenses - options are "yes" or "no" - Yes will disable changes and only report expected changes. No will attempt updates to the licenses assigned.
 
 licenses.json defines which licenses employees and students should have
 - employee - List of licenses to verify for employees. Adds any missing licenses, does not remove existing licenses.
@@ -69,7 +63,8 @@ where the included dockerfile resides and build with the following command: "doc
 - v.2.1.0 - Added action, harmless and loglevel functionality.
 - v.2.1.1 - Force ReportToSpace message encoding to correct emoji in room name error - Thanks Jeremy Knutson.
             Catch errors and bypass when events are missing required fields.
-- v.2.2.0 - Add license processing functionality. 
+- v.2.2.0 - Add license processing functionality.
+- v.2.2.1 - Fix handling of Team Spaces (isModerator flag enabled)
 
 ## Acknowledgements
 Thanks to Jim Martin for sharing the logging and token handling components and the awesome script this is based on.

@@ -25,7 +25,7 @@ import time
 import datetime
 
 global scriptVersion
-scriptVersion = "2.2.0"
+scriptVersion = "2.2.1"
 
 # Create static variables - Unless the Webex Teams API endpoints change, these shouldn't need updating.
 apiMessage = "https://webexapis.com/v1/messages"
