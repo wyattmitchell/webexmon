@@ -197,6 +197,7 @@ def auditSpaces(api):
                         ReportToSpace(f"-- Harmless mode is enabled. This is a notification only. -- Script would have processed room {currentroom.title} in {action} mode but no action has been taken.")
 
                     if str(action) in "update":
+                        roommembers = api.memberships.list(roomId=event.data.roomId)
                         try:
                             if harmless == "no":
                                 api.memberships.create(currentroom.id, personEmail=adminaccount, isModerator=True)
@@ -206,12 +207,25 @@ def auditSpaces(api):
                                 logging.info(f"--- HARMLESS -- Admin would be added to room {currentroom.title}.")
                                 logging.debug(f"--- HARMLESS -- Room ID: {currentroom.id}.")
                         except:
-                            logging.debug("--- Unable to add admin or already exists.")
+                            logging.debug("--- Unable to add admin or already exists. Attempting escalation to moderator.")
+                            try:
+                                if harmless == "no":
+                                    for member in roommembers:
+                                        if str(member.personEmail) in str(adminaccount) and member.isModerator==False:
+                                            api.memberships.delete(member.id)
+                                            api.memberships.create(currentroom.id, personEmail=adminaccount, isModerator=True)
+                                            logging.debug(f"------ Elevated admin account to moderator.")
+                                    else:
+                                        logging.debug(f"------- Admin already in room as moderator. Continuing.")
+                                else:
+                                    logging.info(f"--- HARMLESS --- Admin would be elevated to moderator.")
+                            except:
+                                logging.debug(f"------ Could not elevate admin to moderator.")
                         try:
                             roommembers = api.memberships.list(roomId=event.data.roomId)
                             for member in roommembers:
-                                if str(member.personEmail) in str(adminaccount):
-                                    logging.debug(f"------ Skipping admin account removal.")
+                                if str(member.personEmail) in str(adminaccount) and member.isModerator==True:
+                                    logging.debug(f"------ Skipping admin account removal.")                        
                                 else:
                                     try:
                                         if harmless == "no":
@@ -225,18 +239,33 @@ def auditSpaces(api):
                             ReportToSpace(f"All members processed for room {currentroom.title}.")
                         except:
                             ReportToSpace(f"Unable to update room {currentroom.title} membership.")
+                            
                     if str(action) in "delete":
+                        roommembers = api.memberships.list(roomId=event.data.roomId)
                         try:
                             if harmless == "no":
                                 api.memberships.create(currentroom.id, personEmail=adminaccount, isModerator=True)
-                                logging.debug(f"--- Admin added to room {currentroom.id}.")
+                                ReportToSpace(f"--- Admin added to room {currentroom.title}.")
+                                logging.debug(f"--- Room ID {currentroom.id}.")
                             else:
-                                logging.debug(f"--- HARMLESS -- Admin would be added to room {currentroom.title}.")
+                                logging.info(f"--- HARMLESS -- Admin would be added to room {currentroom.title}.")
                                 logging.debug(f"--- HARMLESS -- Room ID: {currentroom.id}.")
                         except:
-                            logging.debug("--- Unable to add admin or already exists.")
+                            logging.debug("--- Unable to add admin or already exists. Attempting escalation to moderator.")
+                            try:
+                                if harmless == "no":
+                                    for member in roommembers:
+                                        if str(member.personEmail) in str(adminaccount) and member.isModerator==False:
+                                            api.memberships.delete(member.id)
+                                            api.memberships.create(currentroom.id, personEmail=adminaccount, isModerator=True)
+                                            logging.debug(f"------ Elevated admin account to moderator.")
+                                    else:
+                                        logging.debug(f"------- Admin already in room as moderator. Continuing.")
+                                else:
+                                    logging.info(f"--- HARMLESS --- Admin would be elevated to moderator.")
+                            except:
+                                logging.debug(f"------ Could not elevate admin to moderator.")
                         try:
-                            roommembers = api.memberships.list(roomId=event.data.roomId)
                             for member in roommembers:
                                 if str(member.personEmail) in str(adminaccount):
                                     logging.debug(f"------ Skipping admin account removal.")
