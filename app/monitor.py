@@ -166,7 +166,7 @@ def updatetime():
     global epoch_time
     global today
     global eventtime
-    # There is a better way to do this timediff.
+    # There is a better way to do this timediff. Likely a dynamic update that takes into account script run time (set start/end time, calc, update, etc.)
     # For now this fixed number (seconds) should be equal to or greater than the length of time the script takes to run.
     # For a smaller processInterval the script should complete relatively quickly so 15-30 seconds should be plenty.
     timediff = processInterval + 15 
@@ -295,15 +295,18 @@ def auditSpaces(api):
 # Primary function
 def main():
 
+    # Populate runtime variables from config files and current time.
     importvars()
     updatetime()
 
+    # Setup overall logging target.
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M',
                         filename="" + str(workdir) + "/logs/processing.log",
                         filemode='a')
     
+    # Setup error specific logging.
     errorLogpath = str(workdir) + "/logs/error.log"
     global errorlog
     errorlog = setup_logger('error_log', errorLogpath, logging.DEBUG)
@@ -311,6 +314,7 @@ def main():
     # Report script initiation
     ReportToSpace(f"Validation of Webex Cloud services has started. Using: monitor.py {str(scriptVersion)}")
     
+    # token_check is used to track token validation interval. -1 marks tokens to be checked on first run.
     token_check = -1
 
     while True:
@@ -319,8 +323,10 @@ def main():
 
             # Get Tokens and create API object
             do_getTokens()
-            token_check = 86400
             api = WebexTeamsAPI(access_token=accessToken)
+
+            # Reset check for 1 day (86400 seconds)
+            token_check = 86400
 
         # Update time interval variables.
         updatetime()
