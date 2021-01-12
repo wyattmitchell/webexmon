@@ -9,3 +9,7 @@ The intent is to provide ongoing monitoring of newly created spaces and move tho
 The license verification function is intended to validate and, if required, update license assignments to match those specified.
 
 The script as a whole can serve as an example of Webex Teams REST API and WebexTeamsSDK utilization as well as compliance role, Webex Integration and Webex Bots.
+
+## Links to DevNet Learning Labs
+- Getting Started with Webex APIs - https://developer.cisco.com/learning/tracks/collab-cloud
+- Getting Started with Containers (Specifically Intro to containers part 1 and part 2) - https://developer.cisco.com/learning/tracks/containers
