@@ -47,10 +47,11 @@ where the included dockerfile resides and build with the following command: "doc
             based on webexteamssdk. Tokens managed via requests library.
             Wrapped in Docker for standardized deployment.
 - v.2.1.0 - Added action, harmless and loglevel functionality.
-- v.2.1.1 - Force ReportToSpace message encoding to correct emoji in room name error - Thanks Jeremy Knutson.
+- v.2.1.1 - Force ReportToSpace message encoding to correct emoji in room name error
             Catch errors and bypass when events are missing required fields.
 - v.2.2.0 - Add license processing functionality.
 - v.2.2.1 - Fix handling of Team Spaces (isModerator flag enabled)
 
 ## Acknowledgements
 Thanks to Jim Martin for sharing the logging and token handling components and the awesome script this is based on.
+Thanks to Jeremy Knutson for testing and bug fixes.
