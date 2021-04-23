@@ -25,7 +25,7 @@ import time
 import datetime
 
 global scriptVersion
-scriptVersion = "2.1.0"
+scriptVersion = "2.1.1"
 
 # Create static variables - Unless the Webex Teams API endpoints change, these shouldn't need updating.
 apiMessage = "https://webexapis.com/v1/messages"
@@ -51,7 +51,7 @@ def setup_logger(name, log_file, level):
     return logger
 
 # Create Webex Bot Reporting
-def ReportToSpace(ReportMessage):
+def report_to_space(ReportMessage):
     encodedReport = str(repr(ReportMessage.encode('ascii', errors='ignore'))[2:-1])
     payload = "{\"roomId\" : \"" + \
         str(SpaceID) + "\",\"text\" : \"" + str(encodedReport) + "\"}"
@@ -64,8 +64,8 @@ def ReportToSpace(ReportMessage):
     logging.info(f"Message reported to space: {encodedReport} - {response.status_code}")
 
 # Token Management
-def do_getTokens():
-    ReportToSpace("Checking to see if we have the latest Access Token.")
+def do_get_tokens():
+    report_to_space("Checking to see if we have the latest Access Token.")
     with open(str(workdir)+"/tokens.json", "r") as token_store:
         tokens_dict = json.load(token_store)
     global accessToken
@@ -79,8 +79,8 @@ def do_getTokens():
     token_store.close()
     token_age = int(epoch_time) - int(tokenIssued)
     logging.info(f"The access token age is: {datetime.timedelta(seconds=token_age)}")
-    if token_age > 259200:
-        ReportToSpace(
+    if token_age > 172800:
+        report_to_space(
             "The access token is a little stale, refreshing it now..")
         headers = {'cache-control': 'no-cache', 'accept': 'application/json',
                    'content-type': 'application/x-www-form-urlencoded'}
@@ -96,15 +96,14 @@ def do_getTokens():
         accessToken = (tokens_dict["access_token"])
         refreshToken = (tokens_dict["refresh_token"])
         token_store.close()
-        ReportToSpace(
+        report_to_space(
             "Done! The access token has been refreshed. Getting back to work.")
-        logging.info("The access token has been refreshed.")
     else:
-        ReportToSpace(
+        report_to_space(
             "The access token looks daisy fresh.. continuing on with the license reconciliation process.")
 
 # Import configurable variables from webexinfo.json file.
-def importvars():
+def import_vars():
 
     #Import vars
     with open(str(workdir)+"/webexinfo.json", "r") as vars_store:
@@ -161,13 +160,13 @@ def importvars():
     else:
         raise Exception("Harmless not defined as yes or no.")
 
-def updatetime():
+def update_time():
     # Create or update runtime variables
     global timediff
     global epoch_time
     global today
     global eventtime
-    # There is a better way to do this timediff.
+    # There is a better way to do this timediff. Possibly something dynamic to capture script runtime.
     # For now this fixed number (seconds) should be equal to or greater than the length of time the script takes to run.
     # For a smaller processInterval the script should complete relatively quickly so 15-30 seconds should be plenty.
     timediff = processInterval + 15 
@@ -177,7 +176,7 @@ def updatetime():
 
 # Gets all membership events over the specified interval.
 # For rooms created by students this will add the admin account and remove all other members.
-def auditSpaces(api):
+def audit_spaces(api):
 
     logging.info(f"Beginning next run...")
     
@@ -193,15 +192,15 @@ def auditSpaces(api):
                 if str(event.data.personId) in str(currentroom.creatorId):
                     
                     if harmless == "no":
-                        ReportToSpace(f"Processing room {currentroom.title} in {action} mode. Harmless is set to {harmless}.")
+                        report_to_space(f"Processing room {currentroom.title} in {action} mode. Harmless is set to {harmless}.")
                     elif harmless == "yes":
-                        ReportToSpace(f"-- Harmless mode is enabled. This is a notification only. -- Script would have processed room {currentroom.title} in {action} mode but no action has been taken.")
+                        report_to_space(f"-- Harmless mode is enabled. This is a notification only. -- Script would have processed room {currentroom.title} in {action} mode but no action has been taken.")
 
                     if str(action) in "update":
                         try:
                             if harmless == "no":
                                 api.memberships.create(currentroom.id, personEmail=adminaccount)
-                                ReportToSpace(f"--- Admin added to room {currentroom.title}.")
+                                report_to_space(f"--- Admin added to room {currentroom.title}.")
                                 logging.debug(f"--- Room ID {currentroom.id}.")
                             else:
                                 logging.info(f"--- HARMLESS -- Admin would be added to room {currentroom.title}.")
@@ -217,15 +216,15 @@ def auditSpaces(api):
                                     try:
                                         if harmless == "no":
                                             api.memberships.delete(member.id)
-                                            ReportToSpace(f"------ Member {member.personEmail} removed from room {currentroom.title}.")
+                                            report_to_space(f"------ Member {member.personEmail} removed from room {currentroom.title}.")
                                             logging.debug(f"------ Member ID: {member.id}")
                                         else:
                                             logging.info(f"------ HARMLESS -- Member {member.personEmail} would be removed from room {currentroom.title}.")
                                     except:
-                                        ReportToSpace(f"------ Could not delete {member.personEmail} from room {currentroom.title}.")
-                            ReportToSpace(f"All members processed for room {currentroom.title}.")
+                                        report_to_space(f"------ Could not delete {member.personEmail} from room {currentroom.title}.")
+                            report_to_space(f"All members processed for room {currentroom.title}.")
                         except:
-                            ReportToSpace(f"Unable to update room {currentroom.title} membership.")
+                            report_to_space(f"Unable to update room {currentroom.title} membership.")
                     if str(action) in "delete":
                         try:
                             if harmless == "no":
@@ -238,52 +237,55 @@ def auditSpaces(api):
                         try:
                             if harmless == "no":
                                 api.rooms.delete(currentroom.id)
-                                ReportToSpace(f"------ Room {currentroom.title} created by {event.data.personEmail} deleted.")
+                                report_to_space(f"------ Room {currentroom.title} created by {event.data.personEmail} deleted.")
                             else:
                                 logging.info(f"------ HARMLESS -- Room {currentroom.title} created by {event.data.personEmail} would be deleted.")
                         except:
-                            ReportToSpace("------ Room could not be deleted. Possibly already processed in prior run.")
+                            report_to_space("------ Room could not be deleted. Possibly already processed in prior run.")
         except:
             errorlog.debug(f"Failed to process event data: {event}")
 
 # Primary function
 def main():
 
-    importvars()
-    updatetime()
+    # Populate runtime variables from config files and current time.
+    import_vars()
+    update_time()
 
+    # Setup overall logging target.
     logging.basicConfig(level=loglevel,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M',
                         filename="" + str(workdir) + "/processing.log",
                         filemode='a')
     
+    # Setup error specific logging.
     errorLogpath = str(workdir) + "/error.log"
+    global errorlog
     errorlog = setup_logger('error_log', errorLogpath, logging.DEBUG)
 
     # Report script initiation
-    ReportToSpace(
-        "Validation of Webex Cloud services has started. Using: monitor.py "+str(scriptVersion))
+    report_to_space(f"Validation of Webex Cloud services has started. Using: monitor.py {str(scriptVersion)}")
 
-    # Load Tokens from file and update as necessary.
-    do_getTokens()
-    token_check = 86400
+    # token_check is used to track token validation interval. -1 marks tokens to be checked on first run.
+    token_check = -1
 
     while True:
         
         if token_check < 0:
-            do_getTokens()
-            token_check = 86400 
-              
-        # Create API Session
-        api = WebexTeamsAPI(
-            access_token=accessToken)
 
+            # Get Tokens and create API object
+            do_get_tokens()
+            api = WebexTeamsAPI(access_token=accessToken)
+
+            # Reset check for 1 day (86400 seconds)
+            token_check = 86400
+              
         # Update time interval variables.
-        updatetime()
+        update_time()
 
         # Run process
-        auditSpaces(api)
+        audit_spaces(api)
 
         logging.info(f"Sleeping for {processInterval} seconds.")
         token_check = token_check - processInterval

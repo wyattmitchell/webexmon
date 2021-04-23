@@ -2,10 +2,9 @@
 
 ## Use Case
 In K-12 environments students with Webex access may be able to create spaces
-outside of admin view and misuse the technology. Granular control is on the horizon
-but until it arrives this container and script can be used to match newly student
-created Webex spaces then transfer ownership to an administrator and remove other
-users or delete the space entirely.
+outside of admin view and misuse the technology. This container and script can be used
+to match newly student created Webex spaces then transfer ownership to an administrator
+and remove other users or delete the space entirely.
 
 The intent is to provide ongoing monitoring of newly created spaces and move those
 under the control of school teachers or administrators.
@@ -44,6 +43,7 @@ where the included dockerfile resides and build with the following command: "doc
             based on webexteamssdk. Tokens managed via requests library.
             Wrapped in Docker for standardized deployment.
 - v.2.1.0 - Added action, harmless and loglevel functionality.
+- v.2.1.1 - Standardize function naming format.
 
 ## Acknowledgements
 Thanks to Jim Martin for sharing the logging and token handling components and the awesome script this is based on.
